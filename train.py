@@ -39,7 +39,7 @@ def train(args):
 
     # --- Dataset and Dataloaders ---
     print("Loading dataset...")
-    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=200) # Adjust path as needed
+    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=100) # Adjust path as needed
 
     # Calculate split sizes
     num_total = len(full_dataset)

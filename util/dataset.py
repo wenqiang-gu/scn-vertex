@@ -127,5 +127,5 @@ def sparse_collate_fn(batch):
     return (
         torch.cat(coords_batch, dim=0),  # [total_voxels, 4]
         torch.cat(feats_batch, dim=0),   # [total_voxels, C]
-        torch.stack(targets_batch)       # [B, ...]
+        torch.cat(targets_batch)       # [B, ...]
     )
