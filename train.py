@@ -122,43 +122,61 @@ def train(args):
 
                 val_progress_bar.set_postfix({'loss': f'{loss.item():.4f}'})
 
-                ## Optional: Visualization of outputs
-                import matplotlib
-                matplotlib.use('Agg')  # Use non-interactive backend
-                import matplotlib.pyplot as plt
-                from mpl_toolkits.mplot3d import Axes3D  # Required for 3D plotting
-                import numpy as np
+                # --- Optional: Save model outputs and targets for comparison ---
+                try:
+                    import matplotlib
+                    matplotlib.use('Agg')  # Use non-interactive backend
+                    import matplotlib.pyplot as plt
+                    from mpl_toolkits.mplot3d import Axes3D  # Required for 3D plotting
+                    import numpy as np
 
-                # Convert tensors to CPU numpy arrays
-                coords_np = coords.cpu().numpy()
-                outputs_np = outputs.squeeze().cpu().numpy()
-                targets_np = targets.squeeze().cpu().numpy()
+                    print(f"\nGenerating comparison plot for Epoch {epoch+1} Batch {ibatch}...")
 
-                # Assuming coords is [N, 4] → [x, y, z, batch_idx]
-                x = coords_np[:, 0]
-                y = coords_np[:, 1]
-                z = coords_np[:, 2]
+                    # Convert tensors to CPU numpy arrays
+                    coords_np = coords.cpu().numpy()
+                    outputs_np = outputs.squeeze().cpu().numpy()
+                    targets_np = targets.squeeze().cpu().numpy()
 
-                # Optional: normalize output to [0, 1] for colormap
-                vmin, vmax = outputs_np.min(), outputs_np.max()
-                # vmin, vmax = targets_np.min(), targets_np.max()
+                    # Assuming coords is [N, 4] → [x, y, z, batch_idx]
+                    x = coords_np[:, 0]
+                    y = coords_np[:, 1]
+                    z = coords_np[:, 2]
 
-                fig = plt.figure(figsize=(8, 6))
-                ax = fig.add_subplot(111, projection='3d')
+                    # Determine color limits separately for outputs and targets
+                    # Add a small epsilon to avoid min == max if all values are the same
+                    epsilon = 1e-6
+                    vmin_out, vmax_out = outputs_np.min(), outputs_np.max() + epsilon
+                    vmin_tgt, vmax_tgt = targets_np.min(), targets_np.max() + epsilon
 
-                sc = ax.scatter(x, y, z, c=outputs_np, cmap='viridis', vmin=vmin, vmax=vmax, s=1)
-                # sc = ax.scatter(x, y, z, c=targets_np, cmap='viridis', vmin=vmin, vmax=vmax, s=1)
-                fig.colorbar(sc, ax=ax, label='Model Output')
+                    # Create figure with two subplots
+                    fig = plt.figure(figsize=(16, 7)) # Adjusted size slightly
+                    fig.suptitle(f'Final Epoch ({epoch+1}) / First Batch - Outputs vs Targets')
 
-                ax.set_xlabel('X')
-                ax.set_ylabel('Y')
-                ax.set_zlabel('Z')
-                ax.set_title('3D Scatter Plot of Predicted Vertex Score')
+                    # --- Subplot 1: Model Outputs ---
+                    ax1 = fig.add_subplot(121, projection='3d')
+                    sc1 = ax1.scatter(x, y, z, c=outputs_np, cmap='viridis', vmin=vmin_out, vmax=vmax_out, s=2)
+                    fig.colorbar(sc1, ax=ax1, label='Model Output', shrink=0.6)
+                    ax1.set_xlabel('X')
+                    ax1.set_ylabel('Y')
+                    ax1.set_zlabel('Z')
+                    ax1.set_title('Model Outputs')
 
-                plt.tight_layout()
-                # plt.show() # Use non-interactive backend
-                plt.savefig(f"list/output_val_epoch_{epoch}_batch_{ibatch}.png", dpi=300)
-                plt.close()
+                    # --- Subplot 2: Target Values ---
+                    ax2 = fig.add_subplot(122, projection='3d')
+                    sc2 = ax2.scatter(x, y, z, c=targets_np, cmap='viridis', vmin=vmin_tgt, vmax=vmax_tgt, s=2)
+                    fig.colorbar(sc2, ax=ax2, label='Target Value', shrink=0.6)
+                    ax2.set_xlabel('X')
+                    ax2.set_ylabel('Y')
+                    ax2.set_zlabel('Z')
+                    ax2.set_title('Target Values')
+
+                    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to prevent title overlap
+                    plot_filename = f"list/output_vs_target_final_epoch_first_batch.png"
+                    plt.savefig(plot_filename, dpi=300)
+                    plt.close(fig) # Close the specific figure
+                    print(f"Saved comparison plot: {plot_filename}")
+                except Exception as plot_e:
+                    print(f"\nError generating plot: {plot_e}")
 
         avg_val_loss = val_loss / len(val_loader)
         # accuracy = 100 * correct / total if total > 0 else 0 # Avoid division by zero
