@@ -14,18 +14,24 @@ from model.model import DeepVtx as default_model
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch Training Script')
     parser.add_argument('--val_split_ratio', type=float, default=0.2, help='Ratio of dataset to use for validation (default: 0.2)')
-    parser.add_argument('--batch_size', type=int, default=4, help='Input batch size for training (default: 64)')
+    parser.add_argument('--batch_size', type=int, default=4, help='Input batch size for training (default: 4)')
     parser.add_argument('--epochs', type=int, default=1, help='Number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate (default: 0.001)')
+    parser.add_argument('--use-cuda', action='store_true', default=False, help='Enable CUDA training')
     # Add other arguments as needed (e.g., input_size, num_classes if they should be configurable)
     args = parser.parse_args()
     return args
 
 # --- Training and Validation Logic ---
 def train(args):
+    # --- Device Setup ---
+    use_cuda = args.use_cuda and torch.cuda.is_available()
+    device = torch.device("cuda:0" if use_cuda else "cpu")
+    print(f"Using device: {device}")
+
     # Use args for parameters
-    input_size = 10 # Example: Keep fixed or make configurable
-    num_classes = 2 # Example: Keep fixed or make configurable
+    input_size = 1 # Example: Keep fixed or make configurable - Should match DeepVtx input if not passed
+    num_classes = 1 # Example: Keep fixed or make configurable - Should match DeepVtx output if not passed
     batch_size = args.batch_size
     learning_rate = args.lr
     num_epochs = args.epochs
@@ -33,7 +39,7 @@ def train(args):
 
     # --- Dataset and Dataloaders ---
     print("Loading dataset...")
-    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv') # Adjust path as needed
+    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=200) # Adjust path as needed
 
     # Calculate split sizes
     num_total = len(full_dataset)
@@ -51,8 +57,12 @@ def train(args):
 
     # --- Model, Loss, Optimizer ---
     print("Initializing model...")
-    model = default_model(input_size, num_classes)
-    criterion = nn.MSELoss()
+    # Pass the selected device to the model
+    model = default_model(n_input_features=input_size, n_classes=num_classes, device=device)
+    # Model is already moved to device within its __init__ based on the reformatted code
+
+    # Define criterion and optimizer
+    criterion = nn.MSELoss() # Or CrossEntropyLoss if classification targets are class indices
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # --- Metrics Logging ---
@@ -66,10 +76,20 @@ def train(args):
         train_loss = 0.0
         train_progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Train]', leave=False)
         for coords, features, targets in train_progress_bar:
+            # Move data to the selected device
+            # Note: SCN expects coords as LongTensor, features as FloatTensor
+            # The collate_fn should ideally handle tensor conversion and device placement,
+            # but we'll do it here explicitly for clarity if needed.
+            # Assuming sparse_collate_fn returns tensors:
+            coords = coords.to(device)
+            features = features.to(device)
+            targets = targets.to(device) # Ensure targets are also on the correct device
+
             optimizer.zero_grad()
 
+            # SCN expects input as a list/tuple: [coords, features]
             outputs = model([coords, features])
-            loss = criterion(outputs, targets)
+            loss = criterion(outputs, targets.float()) # Ensure target dtype matches output for MSELoss
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
@@ -86,13 +106,31 @@ def train(args):
         val_progress_bar = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Val]', leave=False)
         with torch.no_grad(): # Disable gradient calculation for validation
             for coords, features, targets in val_progress_bar:
+                # Move data to the selected device
+                coords = coords.to(device)
+                features = features.to(device)
+                targets = targets.to(device)
+
                 outputs = model([coords, features])
-                loss = criterion(outputs, targets)
+                loss = criterion(outputs, targets.float()) # Ensure target dtype matches output
                 val_loss += loss.item()
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+
+                # --- Accuracy Calculation ---
+                # Accuracy calculation needs adjustment for MSELoss / regression or SCN output format.
+                # If it's classification with sigmoid output (as in DeepVtx),
+                # you might threshold outputs and compare with targets.
+                # If targets are class indices and loss was CrossEntropy, the original accuracy code might work.
+                # For now, commenting out the potentially incorrect accuracy part for MSELoss.
+                # _, predicted = torch.max(outputs.data, 1) # This assumes classification output
+                # total += targets.size(0) # Use targets.size(0) if targets are (N, num_classes) or (N,)
+                # correct += (predicted == targets).sum().item() # Comparison depends on target format
+
                 val_progress_bar.set_postfix({'loss': f'{loss.item():.4f}'})
+
+        avg_val_loss = val_loss / len(val_loader)
+        # accuracy = 100 * correct / total if total > 0 else 0 # Avoid division by zero
+        accuracy = 0 # Placeholder - Accuracy calculation needs review for MSELoss/SCN
+        val_progress_bar.close() # Close the validation progress bar
 
         avg_val_loss = val_loss / len(val_loader)
         accuracy = 100 * correct / total

@@ -34,8 +34,8 @@ class DeepVtx(nn.Module):
         dimension: int = 3,
         device: Union[str, torch.device] = 'cuda',
         spatial_size: int = 4096,
-        n_input_features: int = 3,
-        n_classes: int = 2
+        n_input_features: int = 1,
+        n_classes: int = 1
     ):
         """
         Initializes the DeepVtx model.
@@ -46,8 +46,8 @@ class DeepVtx(nn.Module):
                                                 Defaults to 'cuda'.
             spatial_size (int): Cubic spatial size of the input volume. Defaults to 4096.
                                 Needs careful consideration based on SCN requirements.
-            n_input_features (int): Number of features for each input point. Defaults to 3.
-            n_classes (int): Number of output classes. Defaults to 2.
+            n_input_features (int): Number of features for each input point. Defaults to 1.
+            n_classes (int): Number of output classes. Defaults to 1.
         """
         super().__init__() # Use super() for cleaner inheritance
 
