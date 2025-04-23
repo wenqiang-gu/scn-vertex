@@ -12,9 +12,7 @@ SCN-Vertex accepts sparse 3D point cloud data (e.g., reconstructed ionization ch
 
 - Sparse 3D convolution using SparseConvNet
 - High-resolution, memory-efficient processing of LArTPC data
-- Point cloud input with optional voxelization
 - Batch processing support with PyTorch DataLoader
-- Modular design for training and evaluation
 
 ## Installation
 
@@ -43,7 +41,7 @@ python setup.py install
 
 ### Data Format
 
-The input data should be stored in `.npz` format with the following fields:
+The input data should be stored in [ROOT](https://root.cern/) format with the following fields:
 
 - `coords`: shape `[N, 3]` — 3D spatial coordinates of each point
 - `features`: shape `[N, C]` — per-point features (e.g., charge)
