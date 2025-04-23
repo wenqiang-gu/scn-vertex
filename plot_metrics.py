@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 # Load the data from the CSV file
 try:
@@ -27,6 +28,8 @@ ax[0].set_ylabel('Loss')
 ax[0].set_title('Training and Validation Loss')
 ax[0].legend()
 ax[0].grid(True)
+# Force x-axis ticks to be integers
+ax[0].xaxis.set_major_locator(MaxNLocator(integer=True))
 
 # Plotting Accuracy
 ax[1].plot(data['epoch'], data['val_accuracy'], label='Validation Accuracy', marker='s', color='green')
@@ -35,6 +38,7 @@ ax[1].set_ylabel('Accuracy')
 ax[1].set_title('Validation Accuracy')
 ax[1].legend()
 ax[1].grid(True)
+ax[1].xaxis.set_major_locator(MaxNLocator(integer=True))
 
 # Adjust layout and display the plot
 plt.tight_layout()

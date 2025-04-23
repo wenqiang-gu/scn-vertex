@@ -6,9 +6,11 @@ from tqdm import tqdm # Import tqdm
 import argparse # Import argparse
 import pandas as pd # Import pandas
 
-# Import DummyDataset from the util folder
 from util.dataset import SparseDataset, sparse_collate_fn
 from model.model import DeepVtx as default_model 
+
+# Set a fixed random seed for random_split
+generator = torch.Generator().manual_seed(42)
 
 # --- Argument Parsing ---
 def parse_args():
@@ -39,7 +41,7 @@ def train(args):
 
     # --- Dataset and Dataloaders ---
     print("Loading dataset...")
-    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=1000) # Adjust path as needed
+    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=200) # Adjust path as needed
 
     # Calculate split sizes
     num_total = len(full_dataset)
@@ -50,7 +52,7 @@ def train(args):
         raise ValueError(f"Training or validation set size is zero. Adjust split ratio or dataset size. Train: {num_train}, Val: {num_val}")
 
     print(f"Splitting dataset: {num_train} train samples, {num_val} validation samples")
-    train_dataset, val_dataset = random_split(full_dataset, [num_train, num_val])
+    train_dataset, val_dataset = random_split(full_dataset, [num_train, num_val], generator=generator)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=sparse_collate_fn)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=sparse_collate_fn) # No need to shuffle validation data

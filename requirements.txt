@@ -2,4 +2,6 @@ torch
 tqdm
 numpy
 pandas
+uproot
 awkward
+matplotlib
