@@ -21,6 +21,7 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate (default: 0.001)')
     parser.add_argument('--use-cuda', action='store_true', default=False, help='Enable CUDA training')
     parser.add_argument('--num-samples', type=int, default=200, help='Number of samples to load from the dataset (default: 200)')
+    parser.add_argument('--file-list', type=str, default='list/nuecc-39k-train.csv', help='Path to the dataset file list CSV (default: list/nuecc-39k-train.csv)')
     # Add other arguments as needed (e.g., input_size, num_classes if they should be configurable)
     args = parser.parse_args()
     return args
@@ -41,8 +42,8 @@ def train(args):
     val_split_ratio = args.val_split_ratio
 
     # --- Dataset and Dataloaders ---
-    print("Loading dataset...")
-    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=args.num_samples) # Adjust path as needed
+    print(f"Loading dataset from: {args.file_list}")
+    full_dataset = SparseDataset(file_list=args.file_list, num_samples=args.num_samples) # Use argument for file list
 
     # Calculate split sizes
     num_total = len(full_dataset)
@@ -56,7 +57,7 @@ def train(args):
     train_dataset, val_dataset = random_split(full_dataset, [num_train, num_val], generator=generator)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=sparse_collate_fn)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=sparse_collate_fn) # No need to shuffle validation data
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, collate_fn=sparse_collate_fn) # No need to shuffle validation data
 
     # --- Model, Loss, Optimizer ---
     print("Initializing model...")
@@ -108,9 +109,8 @@ def train(args):
         total = 0
         val_progress_bar = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Val]', leave=False)
         with torch.no_grad(): # Disable gradient calculation for validation
-            ibatch = 0
+            isample = 0
             for coords, features, targets in val_progress_bar:
-                ibatch += 1
                 # Move data to the selected device
                 coords = coords.to(device)
                 features = features.to(device)
@@ -123,6 +123,7 @@ def train(args):
                 val_progress_bar.set_postfix({'loss': f'{loss.item():.4f}'})
 
                 # --- Optional: Save model outputs and targets for comparison ---
+                isample += 1
                 try:
                     import matplotlib
                     matplotlib.use('Agg')  # Use non-interactive backend
@@ -130,7 +131,7 @@ def train(args):
                     from mpl_toolkits.mplot3d import Axes3D  # Required for 3D plotting
                     import numpy as np
 
-                    print(f"\nGenerating comparison plot for Epoch {epoch+1} Batch {ibatch}...")
+                    print(f"\nGenerating comparison plot for Epoch {epoch+1} Sample {isample}...")
 
                     # Convert tensors to CPU numpy arrays
                     coords_np = coords.cpu().numpy()
@@ -171,7 +172,7 @@ def train(args):
                     ax2.set_title('Target Values')
 
                     plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to prevent title overlap
-                    plot_filename = f"list/output_vs_target_final_epoch_first_batch.png"
+                    plot_filename = f"list/output_vs_target_epoch_{epoch}_sample_{isample}.png"
                     plt.savefig(plot_filename, dpi=300)
                     plt.close(fig) # Close the specific figure
                     print(f"Saved comparison plot: {plot_filename}")
