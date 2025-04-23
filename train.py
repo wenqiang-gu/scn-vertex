@@ -15,11 +15,12 @@ generator = torch.Generator().manual_seed(42)
 # --- Argument Parsing ---
 def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch Training Script')
-    parser.add_argument('--val_split_ratio', type=float, default=0.2, help='Ratio of dataset to use for validation (default: 0.2)')
-    parser.add_argument('--batch_size', type=int, default=4, help='Input batch size for training (default: 4)')
+    parser.add_argument('--val-split-ratio', type=float, default=0.2, help='Ratio of dataset to use for validation (default: 0.2)')
+    parser.add_argument('--batch-size', type=int, default=4, help='Input batch size for training (default: 4)')
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate (default: 0.001)')
     parser.add_argument('--use-cuda', action='store_true', default=False, help='Enable CUDA training')
+    parser.add_argument('--num-samples', type=int, default=200, help='Number of samples to load from the dataset (default: 200)')
     # Add other arguments as needed (e.g., input_size, num_classes if they should be configurable)
     args = parser.parse_args()
     return args
@@ -41,7 +42,7 @@ def train(args):
 
     # --- Dataset and Dataloaders ---
     print("Loading dataset...")
-    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=200) # Adjust path as needed
+    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=args.num_samples) # Adjust path as needed
 
     # Calculate split sizes
     num_total = len(full_dataset)
@@ -117,17 +118,40 @@ def train(args):
                 loss = criterion(outputs, targets.float()) # Ensure target dtype matches output
                 val_loss += loss.item()
 
-                # --- Accuracy Calculation ---
-                # Accuracy calculation needs adjustment for MSELoss / regression or SCN output format.
-                # If it's classification with sigmoid output (as in DeepVtx),
-                # you might threshold outputs and compare with targets.
-                # If targets are class indices and loss was CrossEntropy, the original accuracy code might work.
-                # For now, commenting out the potentially incorrect accuracy part for MSELoss.
-                # _, predicted = torch.max(outputs.data, 1) # This assumes classification output
-                # total += targets.size(0) # Use targets.size(0) if targets are (N, num_classes) or (N,)
-                # correct += (predicted == targets).sum().item() # Comparison depends on target format
-
                 val_progress_bar.set_postfix({'loss': f'{loss.item():.4f}'})
+
+                ## Optional: Visualization of outputs
+                import matplotlib.pyplot as plt
+                from mpl_toolkits.mplot3d import Axes3D  # Required for 3D plotting
+                import numpy as np
+
+                # Convert tensors to CPU numpy arrays
+                coords_np = coords.cpu().numpy()
+                outputs_np = outputs.squeeze().cpu().numpy()
+
+                # Assuming coords is [N, 4] → [batch_idx, x, y, z]
+                x = coords_np[:, 1]
+                y = coords_np[:, 2]
+                z = coords_np[:, 3]
+
+                # Optional: normalize output to [0, 1] for colormap
+                vmin, vmax = outputs_np.min(), outputs_np.max()
+
+                fig = plt.figure(figsize=(8, 6))
+                ax = fig.add_subplot(111, projection='3d')
+
+                sc = ax.scatter(x, y, z, c=outputs_np, cmap='viridis', vmin=vmin, vmax=vmax, s=1)
+                fig.colorbar(sc, ax=ax, label='Model Output')
+
+                ax.set_xlabel('X')
+                ax.set_ylabel('Y')
+                ax.set_zlabel('Z')
+                ax.set_title('3D Scatter Plot of Predicted Vertex Score')
+
+                plt.tight_layout()
+                plt.show()
+                plt.savefig(f"list/output_val_epoch_{epoch}.png", dpi=300)
+                plt.close()
 
         avg_val_loss = val_loss / len(val_loader)
         # accuracy = 100 * correct / total if total > 0 else 0 # Avoid division by zero
