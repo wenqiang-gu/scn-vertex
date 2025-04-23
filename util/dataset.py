@@ -6,12 +6,14 @@ from torch.utils.data import Dataset
 
 
 class SparseDataset(Dataset):
-    def __init__(self, file_list):
+    def __init__(self, file_list, num_samples=None):
         self.file_list = []
         self.true_vertex = []
         with open(file_list) as f:
             dataset = csv.reader(f, delimiter=' ')
             for metainfo in dataset:
+                if num_samples is not None and len(self.file_list) >= num_samples:
+                    break
                 try:
                     with uproot.open(metainfo[0]) as file:
                         self.file_list.append(metainfo[0])
