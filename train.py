@@ -65,11 +65,11 @@ def train(args):
         model.train() # Set model to training mode
         train_loss = 0.0
         train_progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Train]', leave=False)
-        for features, labels in train_progress_bar:
+        for coords, features, targets in train_progress_bar:
             optimizer.zero_grad()
 
-            outputs = model(features)
-            loss = criterion(outputs, labels.long())
+            outputs = model([coords, features])
+            loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
@@ -85,9 +85,9 @@ def train(args):
         total = 0
         val_progress_bar = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Val]', leave=False)
         with torch.no_grad(): # Disable gradient calculation for validation
-            for features, labels in val_progress_bar:
-                outputs = model(features)
-                loss = criterion(outputs, labels.long())
+            for coords, features, targets in val_progress_bar:
+                outputs = model([coords, features])
+                loss = criterion(outputs, targets)
                 val_loss += loss.item()
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
