@@ -15,7 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='PyTorch Training Script')
     parser.add_argument('--val_split_ratio', type=float, default=0.2, help='Ratio of dataset to use for validation (default: 0.2)')
     parser.add_argument('--batch_size', type=int, default=4, help='Input batch size for training (default: 4)')
-    parser.add_argument('--epochs', type=int, default=1, help='Number of epochs to train (default: 10)')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate (default: 0.001)')
     parser.add_argument('--use-cuda', action='store_true', default=False, help='Enable CUDA training')
     # Add other arguments as needed (e.g., input_size, num_classes if they should be configurable)
@@ -39,7 +39,7 @@ def train(args):
 
     # --- Dataset and Dataloaders ---
     print("Loading dataset...")
-    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=100) # Adjust path as needed
+    full_dataset = SparseDataset(file_list='list/nuecc-39k-train.csv', num_samples=1000) # Adjust path as needed
 
     # Calculate split sizes
     num_total = len(full_dataset)
@@ -130,10 +130,6 @@ def train(args):
         avg_val_loss = val_loss / len(val_loader)
         # accuracy = 100 * correct / total if total > 0 else 0 # Avoid division by zero
         accuracy = 0 # Placeholder - Accuracy calculation needs review for MSELoss/SCN
-        val_progress_bar.close() # Close the validation progress bar
-
-        avg_val_loss = val_loss / len(val_loader)
-        accuracy = 100 * correct / total
         val_progress_bar.close() # Close the validation progress bar
 
         # Log metrics for the current epoch

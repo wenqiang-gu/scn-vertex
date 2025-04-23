@@ -101,7 +101,7 @@ class SparseDataset(Dataset):
             x,y,z,q = data['x'], data['y'], data['z'], data['q']
             coords = np.stack((x,y,z), axis=1) # shape: [N, 3]
             features = q.reshape(-1, 1) # shape: [N, C] C=1
-            targets = dist2prob(coords, self.true_vertex[idx]) # shape: (N,), heatmap values
+            targets = dist2prob(coords, self.true_vertex[idx]).reshape(-1,1) # shape: (N,1), heatmap values
             v_coords, v_feats, v_tgts = voxelize(coords, features, targets, resolution=0.5) # Voxelize the data
             
         return (
@@ -127,5 +127,5 @@ def sparse_collate_fn(batch):
     return (
         torch.cat(coords_batch, dim=0),  # [total_voxels, 4]
         torch.cat(feats_batch, dim=0),   # [total_voxels, C]
-        torch.cat(targets_batch)       # [B, ...]
+        torch.cat(targets_batch, dim=0)       # [B, ...]
     )
