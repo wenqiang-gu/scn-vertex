@@ -108,7 +108,9 @@ def train(args):
         total = 0
         val_progress_bar = tqdm(val_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Val]', leave=False)
         with torch.no_grad(): # Disable gradient calculation for validation
+            ibatch = 0
             for coords, features, targets in val_progress_bar:
+                ibatch += 1
                 # Move data to the selected device
                 coords = coords.to(device)
                 features = features.to(device)
@@ -121,6 +123,8 @@ def train(args):
                 val_progress_bar.set_postfix({'loss': f'{loss.item():.4f}'})
 
                 ## Optional: Visualization of outputs
+                import matplotlib
+                matplotlib.use('Agg')  # Use non-interactive backend
                 import matplotlib.pyplot as plt
                 from mpl_toolkits.mplot3d import Axes3D  # Required for 3D plotting
                 import numpy as np
@@ -128,19 +132,22 @@ def train(args):
                 # Convert tensors to CPU numpy arrays
                 coords_np = coords.cpu().numpy()
                 outputs_np = outputs.squeeze().cpu().numpy()
+                targets_np = targets.squeeze().cpu().numpy()
 
-                # Assuming coords is [N, 4] → [batch_idx, x, y, z]
-                x = coords_np[:, 1]
-                y = coords_np[:, 2]
-                z = coords_np[:, 3]
+                # Assuming coords is [N, 4] → [x, y, z, batch_idx]
+                x = coords_np[:, 0]
+                y = coords_np[:, 1]
+                z = coords_np[:, 2]
 
                 # Optional: normalize output to [0, 1] for colormap
                 vmin, vmax = outputs_np.min(), outputs_np.max()
+                # vmin, vmax = targets_np.min(), targets_np.max()
 
                 fig = plt.figure(figsize=(8, 6))
                 ax = fig.add_subplot(111, projection='3d')
 
                 sc = ax.scatter(x, y, z, c=outputs_np, cmap='viridis', vmin=vmin, vmax=vmax, s=1)
+                # sc = ax.scatter(x, y, z, c=targets_np, cmap='viridis', vmin=vmin, vmax=vmax, s=1)
                 fig.colorbar(sc, ax=ax, label='Model Output')
 
                 ax.set_xlabel('X')
@@ -149,8 +156,8 @@ def train(args):
                 ax.set_title('3D Scatter Plot of Predicted Vertex Score')
 
                 plt.tight_layout()
-                plt.show()
-                plt.savefig(f"list/output_val_epoch_{epoch}.png", dpi=300)
+                # plt.show() # Use non-interactive backend
+                plt.savefig(f"list/output_val_epoch_{epoch}_batch_{ibatch}.png", dpi=300)
                 plt.close()
 
         avg_val_loss = val_loss / len(val_loader)
